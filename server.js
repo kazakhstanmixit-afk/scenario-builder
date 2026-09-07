@@ -3,6 +3,7 @@ const path = require("path");
 const crypto = require("crypto");
 const db = require("./db");
 const { DEFAULT_MODELS, BLOCKS, generateForModels, fetchModelList } = require("./openrouter");
+const { fetchProductFromUrl } = require("./extract");
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -25,6 +26,18 @@ app.get("/api/models", async (req, res) => {
     res.json({ models });
   } catch (e) {
     res.status(500).json({ error: e.message || String(e) });
+  }
+});
+
+// Достаём название/описание/цену товара по ссылке на карточку (Kaspi, Wildberries и т.д.)
+app.post("/api/extract-product", async (req, res) => {
+  const { url } = req.body || {};
+  if (!url) return res.status(400).json({ error: "Не передана ссылка" });
+  try {
+    const product = await fetchProductFromUrl(url);
+    res.json(product);
+  } catch (e) {
+    res.status(422).json({ error: e.message || String(e) });
   }
 });
 

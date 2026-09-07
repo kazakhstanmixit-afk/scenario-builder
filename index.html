@@ -63,6 +63,14 @@
   <main class="container">
     <section class="card">
       <h2>1. Товар</h2>
+      <label class="field">
+        <span>Ссылка на товар (Kaspi, Wildberries, Ozon и т.п.) — необязательно</span>
+        <div class="url-row">
+          <input type="text" id="productUrl" placeholder="https://kaspi.kz/shop/p/..." />
+          <button type="button" id="extractBtn" class="btn btn-secondary">Извлечь данные</button>
+        </div>
+        <small id="extractStatus"></small>
+      </label>
       <div class="grid-2">
         <label class="field">
           <span>Название товара *</span>

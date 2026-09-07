@@ -11,11 +11,13 @@
     models: [], // [{id, label, enabled}]
     results: [], // raw response from /api/generate
     selections: {
+      positioning: [],
       headlines: [],
       text_hooks: [],
       visual_hooks: [],
       demonstration: [],
       before_after: [],
+      cta: [],
       scenario_outline: [],
     },
     projectId: null,
@@ -205,6 +207,40 @@
     });
   }
 
+  // ---------- Извлечение товара по ссылке ----------
+  async function extractFromUrl() {
+    const url = $("#productUrl").value.trim();
+    const statusEl = $("#extractStatus");
+    if (!url) {
+      statusEl.textContent = "Вставь ссылку на карточку товара.";
+      statusEl.style.color = "var(--danger)";
+      return;
+    }
+    statusEl.textContent = "Загружаем страницу и достаём данные…";
+    statusEl.style.color = "";
+    $("#extractBtn").disabled = true;
+    try {
+      const res = await fetch("/api/extract-product", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Не удалось извлечь данные");
+      if (json.name) $("#productName").value = json.name;
+      let desc = json.description || "";
+      if (json.price) desc = `Цена: ${json.price}\n${desc}`;
+      if (desc) $("#productDescription").value = desc;
+      statusEl.textContent = "Готово — проверь и поправь поля ниже, если нужно.";
+      statusEl.style.color = "#1a8a4a";
+    } catch (e) {
+      statusEl.textContent = "Не получилось: " + e.message + ". Заполни поля вручную.";
+      statusEl.style.color = "var(--danger)";
+    } finally {
+      $("#extractBtn").disabled = false;
+    }
+  }
+
   // ---------- Генерация ----------
   function getProductFromForm() {
     return {
@@ -279,7 +315,40 @@
     const box = $("#resultsBlocks");
     box.innerHTML = "";
 
-    const arrayBlocks = ["headlines", "text_hooks", "visual_hooks", "demonstration"];
+    // positioning — рендерим первым, отдельно (пары технique+statement)
+    {
+      const meta = state.blocks.find((b) => b.key === "positioning");
+      const section = el("div", "result-block");
+      section.appendChild(el("h3", null, meta ? meta.label : "Позиционирование"));
+      const cols = el("div", "model-columns");
+      state.results.forEach((r) => {
+        const col = el("div", "model-col");
+        col.appendChild(el("div", "model-name", modelLabelFor(r.model)));
+        if (!r.ok) {
+          col.appendChild(el("div", "model-error", r.error || "Ошибка"));
+        } else {
+          const items = r.data.positioning || [];
+          if (!items.length) col.appendChild(el("div", "model-error", "Пусто"));
+          items.forEach((p) => {
+            const row = el("div", "item-row");
+            const txt = el("div", "item-text ba-pair");
+            txt.innerHTML = `<b>${escapeHtml(p.technique)}:</b> ${escapeHtml(p.statement)}`;
+            row.appendChild(txt);
+            const btn = el("button", "add-btn", "+ Добавить");
+            btn.addEventListener("click", () =>
+              addSelection("positioning", { model: r.model, technique: p.technique, statement: p.statement })
+            );
+            row.appendChild(btn);
+            col.appendChild(row);
+          });
+        }
+        cols.appendChild(col);
+      });
+      section.appendChild(cols);
+      box.appendChild(section);
+    }
+
+    const arrayBlocks = ["headlines", "text_hooks", "visual_hooks", "demonstration", "cta"];
 
     arrayBlocks.forEach((blockKey) => {
       const meta = state.blocks.find((b) => b.key === blockKey);
@@ -397,15 +466,28 @@
       items.forEach((item) => {
         const row = el("div", "final-item");
         const ta = el("textarea");
-        ta.rows = meta.key === "before_after" ? 2 : 1;
-        ta.value = meta.key === "before_after"
-          ? `До: ${item.before}\nПосле: ${item.after}`
-          : item.text;
+        const isPair = meta.key === "before_after" || meta.key === "positioning";
+        ta.rows = isPair ? 2 : 1;
+        if (meta.key === "before_after") {
+          ta.value = `До: ${item.before}\nПосле: ${item.after}`;
+        } else if (meta.key === "positioning") {
+          ta.value = `${item.technique}: ${item.statement}`;
+        } else {
+          ta.value = item.text;
+        }
         ta.addEventListener("input", () => {
           if (meta.key === "before_after") {
             const lines = ta.value.split("\n");
             item.before = (lines[0] || "").replace(/^До:\s*/i, "");
             item.after = (lines[1] || "").replace(/^После:\s*/i, "");
+          } else if (meta.key === "positioning") {
+            const idx = ta.value.indexOf(":");
+            if (idx === -1) {
+              item.statement = ta.value;
+            } else {
+              item.technique = ta.value.slice(0, idx).trim();
+              item.statement = ta.value.slice(idx + 1).trim();
+            }
           } else {
             item.text = ta.value;
           }
@@ -441,6 +523,8 @@
       items.forEach((item, i) => {
         if (meta.key === "before_after") {
           lines.push(`${i + 1}. До: ${item.before}\n   После: ${item.after}`);
+        } else if (meta.key === "positioning") {
+          lines.push(`${i + 1}. [${item.technique}] ${item.statement}`);
         } else {
           lines.push(`${i + 1}. ${item.text}`);
         }
@@ -513,7 +597,16 @@
 
     state.results = p.results || [];
     state.selections = Object.assign(
-      { headlines: [], text_hooks: [], visual_hooks: [], demonstration: [], before_after: [], scenario_outline: [] },
+      {
+        positioning: [],
+        headlines: [],
+        text_hooks: [],
+        visual_hooks: [],
+        demonstration: [],
+        before_after: [],
+        cta: [],
+        scenario_outline: [],
+      },
       p.selections || {}
     );
     $("#finalText").value = p.finalText || "";
@@ -537,6 +630,7 @@
     initModelSearch();
 
     $("#generateBtn").addEventListener("click", generate);
+    $("#extractBtn").addEventListener("click", extractFromUrl);
     $("#saveProjectBtn").addEventListener("click", saveProject);
     $("#downloadTxtBtn").addEventListener("click", () =>
       download(`${($("#projectTitle").value || "scenario").trim()}.txt`, $("#finalText").value)

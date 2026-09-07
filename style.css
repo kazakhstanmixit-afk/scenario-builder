@@ -77,6 +77,9 @@ input[type="text"], input[type="password"], textarea, select {
 }
 textarea { resize: vertical; }
 
+.url-row { display: flex; gap: 8px; }
+.url-row input { flex: 1; }
+
 .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
