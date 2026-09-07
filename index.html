@@ -34,7 +34,13 @@
           <input type="text" id="customModelInput" placeholder="например: deepseek/deepseek-chat" />
           <button type="button" id="addModelBtn" class="btn btn-secondary">Добавить модель</button>
         </div>
-        <small>ID моделей смотри на <a href="https://openrouter.ai/models" target="_blank" rel="noopener">openrouter.ai/models</a>.</small>
+        <small>Не уверена в точном ID? Ищи ниже — список подтягивается напрямую с OpenRouter.</small>
+
+        <label class="field" style="margin-top: 10px;">
+          <span>Поиск модели на OpenRouter</span>
+          <input type="text" id="modelSearchInput" placeholder="например: claude, gpt, gemini, deepseek..." />
+        </label>
+        <div id="modelSearchResults" class="model-search-results"></div>
       </div>
 
       <div class="dialog-actions">

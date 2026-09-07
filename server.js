@@ -2,16 +2,30 @@ const express = require("express");
 const path = require("path");
 const crypto = require("crypto");
 const db = require("./db");
-const { DEFAULT_MODELS, BLOCKS, generateForModels } = require("./openrouter");
+const { DEFAULT_MODELS, BLOCKS, generateForModels, fetchModelList } = require("./openrouter");
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
+// Отдаём статику из корня проекта: при загрузке файлов через GitHub-веб-интерфейс
+// (Add file → Upload files) вложенные папки часто "разворачиваются" в корень,
+// поэтому index.html/app.js/style.css ищем прямо рядом с server.js.
 app.use(express.static(__dirname));
 
 // -------- API --------
 
 app.get("/api/config", (req, res) => {
   res.json({ defaultModels: DEFAULT_MODELS, blocks: BLOCKS });
+});
+
+// Живой список моделей с OpenRouter — чтобы в настройках можно было найти
+// точный актуальный ID модели, а не гадать вручную (ID у OpenRouter иногда меняются).
+app.get("/api/models", async (req, res) => {
+  try {
+    const models = await fetchModelList();
+    res.json({ models });
+  } catch (e) {
+    res.status(500).json({ error: e.message || String(e) });
+  }
 });
 
 app.get("/api/projects", (req, res) => {

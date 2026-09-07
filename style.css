@@ -129,6 +129,22 @@ dialog::backdrop { background: rgba(20, 20, 30, 0.4); }
 .add-model-row { display: flex; gap: 8px; margin-top: 8px; }
 .add-model-row input { flex: 1; }
 
+.model-search-results {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 220px; overflow-y: auto;
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 4px; margin-top: 4px;
+}
+.model-search-results .msr-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: 6px; font-size: 13px;
+}
+.model-search-results .msr-row:hover { background: #f0f0f5; }
+.model-search-results .msr-info { flex: 1; min-width: 0; }
+.model-search-results .msr-name { font-weight: 600; }
+.model-search-results .msr-id { color: var(--muted); font-size: 11.5px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-search-results .msr-empty { color: var(--muted); font-size: 12px; padding: 6px 8px; }
+
 .projects-list { display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; }
 .project-item {
   display: flex; align-items: center; justify-content: space-between;

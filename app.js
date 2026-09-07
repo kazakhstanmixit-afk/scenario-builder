@@ -7,6 +7,7 @@
   const state = {
     blocks: [],
     defaultModels: [],
+    allModels: null, // живой список с OpenRouter, подгружается лениво
     models: [], // [{id, label, enabled}]
     results: [], // raw response from /api/generate
     selections: {
@@ -72,18 +73,84 @@
     });
   }
 
+  function addModelToList(id, label) {
+    if (state.models.some((m) => m.id === id)) return;
+    state.models.push({ id, label: label || id, enabled: true });
+    saveModels();
+    renderModelList();
+  }
+
   function addCustomModel() {
     const input = $("#customModelInput");
     const val = input.value.trim();
     if (!val) return;
-    if (state.models.some((m) => m.id === val)) {
-      input.value = "";
+    addModelToList(val, val);
+    input.value = "";
+  }
+
+  // ---------- Живой поиск моделей на OpenRouter ----------
+  async function ensureAllModelsLoaded() {
+    if (state.allModels) return state.allModels;
+    const box = $("#modelSearchResults");
+    box.innerHTML = '<div class="msr-empty">Загружаем список моделей с OpenRouter…</div>';
+    try {
+      const res = await fetch("/api/models");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Ошибка загрузки списка моделей");
+      state.allModels = json.models || [];
+      box.innerHTML = '<div class="msr-empty">Начни печатать название модели выше.</div>';
+    } catch (e) {
+      state.allModels = [];
+      box.innerHTML = `<div class="msr-empty">Не удалось загрузить список: ${e.message}</div>`;
+    }
+    return state.allModels;
+  }
+
+  function renderModelSearchResults(query) {
+    const box = $("#modelSearchResults");
+    const all = state.allModels || [];
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      box.innerHTML = '<div class="msr-empty">Начни печатать название модели выше.</div>';
       return;
     }
-    state.models.push({ id: val, label: val, enabled: true });
-    saveModels();
-    renderModelList();
-    input.value = "";
+    const matches = all
+      .filter((m) => m.id.toLowerCase().includes(q) || (m.name || "").toLowerCase().includes(q))
+      .slice(0, 30);
+    box.innerHTML = "";
+    if (!matches.length) {
+      box.appendChild(el("div", "msr-empty", "Ничего не найдено."));
+      return;
+    }
+    matches.forEach((m) => {
+      const row = el("div", "msr-row");
+      const info = el("div", "msr-info");
+      info.appendChild(el("span", "msr-name", m.name || m.id));
+      info.appendChild(el("span", "msr-id", m.id));
+      row.appendChild(info);
+      const already = state.models.some((x) => x.id === m.id);
+      const btn = el("button", "btn btn-secondary btn-small", already ? "Добавлено" : "Добавить");
+      btn.disabled = already;
+      btn.addEventListener("click", () => {
+        addModelToList(m.id, m.name || m.id);
+        renderModelSearchResults(query);
+      });
+      row.appendChild(btn);
+      box.appendChild(row);
+    });
+  }
+
+  let modelSearchDebounce = null;
+  function initModelSearch() {
+    const input = $("#modelSearchInput");
+    input.addEventListener("focus", () => ensureAllModelsLoaded());
+    input.addEventListener("input", () => {
+      clearTimeout(modelSearchDebounce);
+      modelSearchDebounce = setTimeout(async () => {
+        await ensureAllModelsLoaded();
+        renderModelSearchResults(input.value);
+      }, 150);
+    });
   }
 
   // ---------- Настройки / диалоги ----------
@@ -467,6 +534,7 @@
     loadModels();
     renderModelList();
     initDialogs();
+    initModelSearch();
 
     $("#generateBtn").addEventListener("click", generate);
     $("#saveProjectBtn").addEventListener("click", saveProject);

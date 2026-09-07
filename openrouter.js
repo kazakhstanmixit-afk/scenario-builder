@@ -1,16 +1,42 @@
 // Логика обращения к OpenRouter и парсинга ответов моделей.
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models";
 
-// Модели по умолчанию (алиасы "-latest" там, где они есть у OpenRouter,
-// чтобы список не протухал при выходе новых версий).
-// Пользователь может добавить любой другой slug с openrouter.ai/models вручную.
+// Модели по умолчанию. OpenRouter довольно часто переименовывает/обновляет
+// ID моделей, поэтому эти значения могут со временем протухнуть — на этот
+// случай в настройках сайта есть живой поиск по актуальному списку моделей
+// (см. GET /api/models), где можно найти правильный ID и добавить его.
 const DEFAULT_MODELS = [
-  { id: "anthropic/claude-sonnet-latest", label: "Claude (Sonnet)" },
-  { id: "openai/gpt-latest", label: "GPT (OpenAI)" },
-  { id: "google/gemini-pro-latest", label: "Gemini (Google)" },
+  { id: "anthropic/claude-sonnet-5", label: "Claude (Sonnet)" },
+  { id: "openai/gpt-5-5", label: "GPT (OpenAI)" },
+  { id: "google/gemini-3.5-flash", label: "Gemini (Google)" },
   { id: "x-ai/grok-4.6", label: "Grok (xAI)" },
 ];
+
+// Простой кэш списка моделей, чтобы не дёргать OpenRouter при каждом
+// открытии настроек на сайте.
+let modelsCache = { data: null, ts: 0 };
+const MODELS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 минут
+
+async function fetchModelList() {
+  const now = Date.now();
+  if (modelsCache.data && now - modelsCache.ts < MODELS_CACHE_TTL_MS) {
+    return modelsCache.data;
+  }
+  const resp = await fetch(OPENROUTER_MODELS_URL);
+  if (!resp.ok) {
+    throw new Error(`OpenRouter models ${resp.status}`);
+  }
+  const json = await resp.json();
+  const list = (json.data || []).map((m) => ({
+    id: m.id,
+    name: m.name || m.id,
+    context_length: m.context_length || null,
+  }));
+  modelsCache = { data: list, ts: now };
+  return list;
+}
 
 const BLOCKS = [
   { key: "headlines", label: "Заголовки" },
@@ -144,4 +170,4 @@ async function generateForModels({ apiKey, models, product }) {
   return results;
 }
 
-module.exports = { DEFAULT_MODELS, BLOCKS, generateForModels };
+module.exports = { DEFAULT_MODELS, BLOCKS, generateForModels, fetchModelList };
