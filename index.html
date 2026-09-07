@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Конструктор рекламных сценариев</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <h1>Конструктор рекламных сценариев</h1>
+      <div class="topbar-actions">
+        <button id="btnProjects" class="btn btn-ghost">Мои проекты</button>
+        <button id="btnSettings" class="btn btn-ghost">Настройки</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Настройки: ключ OpenRouter + список моделей -->
+  <dialog id="settingsDialog">
+    <form method="dialog" class="settings-form">
+      <h2>Настройки</h2>
+      <label class="field">
+        <span>OpenRouter API-ключ</span>
+        <input type="password" id="apiKeyInput" placeholder="sk-or-v1-..." autocomplete="off" />
+        <small>Хранится только в этом браузере (localStorage), на сервер не сохраняется. Получить ключ можно на <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>.</small>
+      </label>
+
+      <div class="field">
+        <span>Модели, которые будут предлагать варианты</span>
+        <div id="modelList" class="model-list"></div>
+        <div class="add-model-row">
+          <input type="text" id="customModelInput" placeholder="например: deepseek/deepseek-chat" />
+          <button type="button" id="addModelBtn" class="btn btn-secondary">Добавить модель</button>
+        </div>
+        <small>ID моделей смотри на <a href="https://openrouter.ai/models" target="_blank" rel="noopener">openrouter.ai/models</a>.</small>
+      </div>
+
+      <div class="dialog-actions">
+        <button value="cancel" class="btn btn-ghost">Закрыть</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Список сохранённых проектов -->
+  <dialog id="projectsDialog">
+    <div class="settings-form">
+      <h2>Сохранённые проекты</h2>
+      <div id="projectsList" class="projects-list"></div>
+      <div class="dialog-actions">
+        <button id="closeProjectsBtn" class="btn btn-ghost">Закрыть</button>
+      </div>
+    </div>
+  </dialog>
+
+  <main class="container">
+    <section class="card">
+      <h2>1. Товар</h2>
+      <div class="grid-2">
+        <label class="field">
+          <span>Название товара *</span>
+          <input type="text" id="productName" placeholder="Например: беспроводные наушники X1" />
+        </label>
+        <label class="field">
+          <span>Ниша / категория</span>
+          <input type="text" id="productCategory" placeholder="Например: электроника, косметика, курсы" />
+        </label>
+      </div>
+      <label class="field">
+        <span>Описание товара</span>
+        <textarea id="productDescription" rows="3" placeholder="Что это, какие особенности, чем полезен"></textarea>
+      </label>
+      <div class="grid-2">
+        <label class="field">
+          <span>Целевая аудитория</span>
+          <input type="text" id="productAudience" placeholder="Например: женщины 25-40, занимаются спортом" />
+        </label>
+        <label class="field">
+          <span>Язык результата</span>
+          <select id="productLanguage">
+            <option value="ru">Русский</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+      </div>
+      <button id="generateBtn" class="btn btn-primary">Сгенерировать варианты</button>
+      <div id="generateStatus" class="status-line"></div>
+    </section>
+
+    <section id="resultsSection" class="card hidden">
+      <h2>2. Варианты от моделей</h2>
+      <p class="hint">Нажимай «+ Добавить в сценарий» у понравившихся вариантов — можно комбинировать из разных моделей.</p>
+      <div id="resultsBlocks"></div>
+    </section>
+
+    <section id="finalSection" class="card hidden">
+      <h2>3. Итоговый сценарий</h2>
+      <div id="finalBlocks"></div>
+      <label class="field">
+        <span>Финальный текст (можно редактировать вручную)</span>
+        <textarea id="finalText" rows="14"></textarea>
+      </label>
+      <div class="final-actions">
+        <input type="text" id="projectTitle" placeholder="Название проекта" />
+        <button id="saveProjectBtn" class="btn btn-secondary">Сохранить проект</button>
+        <button id="downloadTxtBtn" class="btn btn-secondary">Скачать .txt</button>
+        <button id="downloadMdBtn" class="btn btn-secondary">Скачать .md</button>
+      </div>
+      <div id="saveStatus" class="status-line"></div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

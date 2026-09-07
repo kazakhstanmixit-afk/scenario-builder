@@ -1,0 +1,16 @@
+{
+  "name": "scenario-builder",
+  "version": "1.0.0",
+  "description": "Собирает рекламные сценарии (хуки, заголовки, демо, до/после) через разные ИИ-модели по OpenRouter",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
