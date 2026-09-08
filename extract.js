@@ -104,17 +104,24 @@ async function fetchProductFromUrl(url, scraperApiKey) {
         signal: controller.signal,
         headers: scraperApiKey ? undefined : browserHeaders,
       });
-      if (resp.status === 429 && attempt === 0 && !scraperApiKey) {
-        // Похоже на защиту от частых запросов — ждём и пробуем один раз ещё
+      const looksLikeBotBlock = resp.status >= 400 && resp.status < 500 && resp.status !== 404;
+      if (looksLikeBotBlock && attempt === 0 && !scraperApiKey) {
+        // Похоже на защиту от ботов/частых запросов — ждём и пробуем один раз ещё.
+        // Разные сайты используют разные нестандартные коды для этого (429, 403,
+        // а у некоторых маркетплейсов встречается и 498), поэтому не завязываемся
+        // на конкретный код, а трактуем любой "клиентский" не-404 как блокировку.
         await new Promise((r) => setTimeout(r, 2500));
         return doFetch(1);
       }
       if (!resp.ok) {
-        if (resp.status === 429 || resp.status === 403) {
+        if (resp.status === 404) {
+          throw new Error("Страница не найдена (404) — проверь ссылку.");
+        }
+        if (looksLikeBotBlock) {
           throw new Error(
             scraperApiKey
               ? `Даже через сервис обхода защиты сайт не пустил (${resp.status}). Заполни поля вручную.`
-              : `Сайт заблокировал автоматический запрос (${resp.status}) — у него защита от ботов. Такое часто встречается у крупных маркетплейсов (Kaspi, Wildberries). Можно добавить ключ сервиса обхода защиты в Настройках, или заполнить поля вручную.`
+              : `Сайт заблокировал автоматический запрос (${resp.status}) — похоже на защиту от ботов. Такое часто встречается у крупных маркетплейсов (Kaspi, Wildberries, Ozon). Можно добавить ключ сервиса обхода защиты в Настройках, или заполнить поля вручную.`
           );
         }
         throw new Error(`Сайт вернул ошибку ${resp.status}`);
