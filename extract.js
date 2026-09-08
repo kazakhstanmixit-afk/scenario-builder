@@ -74,29 +74,48 @@ async function fetchProductFromUrl(url) {
     throw new Error("Ссылка должна начинаться с http(s)");
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  let html;
-  try {
-    const resp = await fetch(parsedUrl.toString(), {
-      signal: controller.signal,
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
-        Accept: "text/html,application/xhtml+xml",
-        "Accept-Language": "ru,en;q=0.8",
-      },
-    });
-    if (!resp.ok) {
-      throw new Error(`Сайт вернул ошибку ${resp.status}`);
+  const browserHeaders = {
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    Referer: `${parsedUrl.protocol}//${parsedUrl.host}/`,
+  };
+
+  async function doFetch(attempt) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const resp = await fetch(parsedUrl.toString(), { signal: controller.signal, headers: browserHeaders });
+      if (resp.status === 429 && attempt === 0) {
+        // Похоже на защиту от частых запросов — ждём и пробуем один раз ещё
+        await new Promise((r) => setTimeout(r, 2500));
+        return doFetch(1);
+      }
+      if (!resp.ok) {
+        if (resp.status === 429 || resp.status === 403) {
+          throw new Error(
+            `Сайт заблокировал автоматический запрос (${resp.status}) — у него защита от ботов. Такое часто встречается у крупных маркетплейсов (Kaspi, Wildberries). Заполни поля вручную.`
+          );
+        }
+        throw new Error(`Сайт вернул ошибку ${resp.status}`);
+      }
+      return resp.text();
+    } catch (e) {
+      if (e.name === "AbortError") throw new Error("Сайт не ответил вовремя (таймаут)");
+      throw e;
+    } finally {
+      clearTimeout(timeout);
     }
-    html = await resp.text();
-  } catch (e) {
-    if (e.name === "AbortError") throw new Error("Сайт не ответил вовремя (таймаут)");
-    throw e;
-  } finally {
-    clearTimeout(timeout);
   }
+
+  const html = await doFetch(0);
 
   const jsonLd = extractJsonLdProduct(html);
 
