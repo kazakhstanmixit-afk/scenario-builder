@@ -43,6 +43,12 @@
         <div id="modelSearchResults" class="model-search-results"></div>
       </div>
 
+      <label class="field" style="margin-top: 10px;">
+        <span>Ключ ScraperAPI (опционально — для сайтов с защитой от ботов, например Kaspi)</span>
+        <input type="password" id="scraperKeyInput" placeholder="вставь ключ, если извлечение по ссылке не работает" autocomplete="off" />
+        <small>Без этого ключа извлечение по ссылке работает для обычных сайтов, но крупные маркетплейсы (Kaspi, Wildberries) часто блокируют такие запросы. Бесплатный ключ можно получить на <a href="https://www.scraperapi.com/" target="_blank" rel="noopener">scraperapi.com</a> (проверь актуальные условия бесплатного тарифа на сайте). Тоже хранится только в этом браузере.</small>
+      </label>
+
       <div class="dialog-actions">
         <button value="cancel" class="btn btn-ghost">Закрыть</button>
       </div>

@@ -63,7 +63,7 @@ function extractJsonLdProduct(html) {
   return null;
 }
 
-async function fetchProductFromUrl(url) {
+async function fetchProductFromUrl(url, scraperApiKey) {
   let parsedUrl;
   try {
     parsedUrl = new URL(url);
@@ -73,6 +73,12 @@ async function fetchProductFromUrl(url) {
   if (!/^https?:$/.test(parsedUrl.protocol)) {
     throw new Error("Ссылка должна начинаться с http(s)");
   }
+
+  // Если задан ключ сервиса обхода антибот-защиты (например ScraperAPI) — идём через него.
+  // У него простой формат: GET https://api.scraperapi.com/?api_key=...&url=...
+  const fetchUrl = scraperApiKey
+    ? `https://api.scraperapi.com/?api_key=${encodeURIComponent(scraperApiKey)}&url=${encodeURIComponent(parsedUrl.toString())}&render=true`
+    : parsedUrl.toString();
 
   const browserHeaders = {
     "User-Agent":
@@ -90,10 +96,15 @@ async function fetchProductFromUrl(url) {
 
   async function doFetch(attempt) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    // Через сервис обхода антибота рендер страницы занимает больше времени — даём больше запаса.
+    const timeoutMs = scraperApiKey ? FETCH_TIMEOUT_MS * 3 : FETCH_TIMEOUT_MS;
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const resp = await fetch(parsedUrl.toString(), { signal: controller.signal, headers: browserHeaders });
-      if (resp.status === 429 && attempt === 0) {
+      const resp = await fetch(fetchUrl, {
+        signal: controller.signal,
+        headers: scraperApiKey ? undefined : browserHeaders,
+      });
+      if (resp.status === 429 && attempt === 0 && !scraperApiKey) {
         // Похоже на защиту от частых запросов — ждём и пробуем один раз ещё
         await new Promise((r) => setTimeout(r, 2500));
         return doFetch(1);
@@ -101,7 +112,9 @@ async function fetchProductFromUrl(url) {
       if (!resp.ok) {
         if (resp.status === 429 || resp.status === 403) {
           throw new Error(
-            `Сайт заблокировал автоматический запрос (${resp.status}) — у него защита от ботов. Такое часто встречается у крупных маркетплейсов (Kaspi, Wildberries). Заполни поля вручную.`
+            scraperApiKey
+              ? `Даже через сервис обхода защиты сайт не пустил (${resp.status}). Заполни поля вручную.`
+              : `Сайт заблокировал автоматический запрос (${resp.status}) — у него защита от ботов. Такое часто встречается у крупных маркетплейсов (Kaspi, Wildberries). Можно добавить ключ сервиса обхода защиты в Настройках, или заполнить поля вручную.`
           );
         }
         throw new Error(`Сайт вернул ошибку ${resp.status}`);

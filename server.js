@@ -32,9 +32,10 @@ app.get("/api/models", async (req, res) => {
 // Достаём название/описание/цену товара по ссылке на карточку (Kaspi, Wildberries и т.д.)
 app.post("/api/extract-product", async (req, res) => {
   const { url } = req.body || {};
+  const scraperApiKey = req.header("x-scraper-key") || undefined;
   if (!url) return res.status(400).json({ error: "Не передана ссылка" });
   try {
-    const product = await fetchProductFromUrl(url);
+    const product = await fetchProductFromUrl(url, scraperApiKey);
     res.json(product);
   } catch (e) {
     res.status(422).json({ error: e.message || String(e) });

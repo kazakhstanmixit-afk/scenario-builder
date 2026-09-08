@@ -3,6 +3,7 @@
 
   const LS_KEY_API = "sb_openrouter_key";
   const LS_KEY_MODELS = "sb_models";
+  const LS_KEY_SCRAPER = "sb_scraper_key";
 
   const state = {
     blocks: [],
@@ -173,6 +174,12 @@
     apiKeyInput.addEventListener("input", () => {
       localStorage.setItem(LS_KEY_API, apiKeyInput.value.trim());
     });
+
+    const scraperKeyInput = $("#scraperKeyInput");
+    scraperKeyInput.value = localStorage.getItem(LS_KEY_SCRAPER) || "";
+    scraperKeyInput.addEventListener("input", () => {
+      localStorage.setItem(LS_KEY_SCRAPER, scraperKeyInput.value.trim());
+    });
   }
 
   async function renderProjectsList() {
@@ -220,9 +227,12 @@
     statusEl.style.color = "";
     $("#extractBtn").disabled = true;
     try {
+      const scraperKey = localStorage.getItem(LS_KEY_SCRAPER);
+      const headers = { "Content-Type": "application/json" };
+      if (scraperKey) headers["x-scraper-key"] = scraperKey;
       const res = await fetch("/api/extract-product", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ url }),
       });
       const json = await res.json();
