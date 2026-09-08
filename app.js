@@ -12,6 +12,7 @@
     models: [], // [{id, label, enabled}]
     results: [], // raw response from /api/generate
     selections: {
+      pain: [],
       positioning: [],
       headlines: [],
       text_hooks: [],
@@ -325,7 +326,36 @@
     const box = $("#resultsBlocks");
     box.innerHTML = "";
 
-    // positioning — рендерим первым, отдельно (пары технique+statement)
+    // pain — рендерим первым (простой список, как заголовки/хуки)
+    {
+      const meta = state.blocks.find((b) => b.key === "pain");
+      const section = el("div", "result-block");
+      section.appendChild(el("h3", null, meta ? meta.label : "Боли клиента"));
+      const cols = el("div", "model-columns");
+      state.results.forEach((r) => {
+        const col = el("div", "model-col");
+        col.appendChild(el("div", "model-name", modelLabelFor(r.model)));
+        if (!r.ok) {
+          col.appendChild(el("div", "model-error", r.error || "Ошибка"));
+        } else {
+          const items = r.data.pain || [];
+          if (!items.length) col.appendChild(el("div", "model-error", "Пусто"));
+          items.forEach((text) => {
+            const row = el("div", "item-row");
+            row.appendChild(el("div", "item-text", text));
+            const btn = el("button", "add-btn", "+ Добавить");
+            btn.addEventListener("click", () => addSelection("pain", { model: r.model, text }));
+            row.appendChild(btn);
+            col.appendChild(row);
+          });
+        }
+        cols.appendChild(col);
+      });
+      section.appendChild(cols);
+      box.appendChild(section);
+    }
+
+    // positioning — рендерим следующим, отдельно (пары технique+statement)
     {
       const meta = state.blocks.find((b) => b.key === "positioning");
       const section = el("div", "result-block");
@@ -608,6 +638,7 @@
     state.results = p.results || [];
     state.selections = Object.assign(
       {
+        pain: [],
         positioning: [],
         headlines: [],
         text_hooks: [],
